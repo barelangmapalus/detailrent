@@ -683,17 +683,19 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxkFothd6ZzQBpJ1aLvRyxLSSfGXa412MKLBK9pgeEn0Hap-453hqytAPeXdTbv8YOS9w/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxmh64U8GtR88cAj8aKuSDJyFs9hy8OrfQDPZxx-0KzDX-BevExNbYd1jj71faECy0vqg/exec';
     const FORM = document.getElementById('propertyForm');
     const SUBMIT_BTN = document.getElementById('submitBtn');
     const RESET_BTN = document.getElementById('resetBtn');
     const TOAST = document.getElementById('toast');
-    const imageData = {
-      gambar_utama: '',
-      gambar2: '',
-      gambar3: '',
-      gambar4: '',
-      gambar5: ''
+    
+    // Simpan file untuk dikirim
+    const imageFiles = {
+      gambar_utama: null,
+      gambar2: null,
+      gambar3: null,
+      gambar4: null,
+      gambar5: null
     };
 
     const moneyFields = [
@@ -748,40 +750,6 @@
       }
     }
 
-    async function compressImage(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = event => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const maxSize = 1200;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > maxSize || height > maxSize) {
-              if (width > height) {
-                height = Math.round((height * maxSize) / width);
-                width = maxSize;
-              } else {
-                width = Math.round((width * maxSize) / height);
-                height = maxSize;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.72));
-          };
-          img.onerror = reject;
-          img.src = event.target.result;
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    }
-
     function renderImagePreview(input, dataUrl) {
       const label = input.closest('.image-picker');
       const name = input.files[0] ? input.files[0].name : 'Gambar';
@@ -803,7 +771,7 @@
       tag.textContent = name;
     }
 
-    async function handleImageChange(event) {
+    function handleImageChange(event) {
       const input = event.target;
       const file = input.files[0];
       const key = input.dataset.imageKey;
@@ -815,19 +783,19 @@
         return;
       }
 
-      try {
-        showToast('Memproses gambar...', '');
-        const dataUrl = await compressImage(file);
-        imageData[key] = dataUrl;
-        renderImagePreview(input, dataUrl);
-        if (key === 'gambar_utama') document.getElementById('gambar_utama_error').style.display = 'none';
+      // Simpan file
+      imageFiles[key] = file;
+      
+      // Tampilkan preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        renderImagePreview(input, e.target.result);
+        if (key === 'gambar_utama') {
+          document.getElementById('gambar_utama_error').style.display = 'none';
+        }
         showToast('Gambar siap dikirim.', 'success');
-      } catch (error) {
-        console.error(error);
-        input.value = '';
-        imageData[key] = '';
-        showToast('Gagal memproses gambar.', 'error');
-      }
+      };
+      reader.readAsDataURL(file);
     }
 
     function getFacilities() {
@@ -854,7 +822,7 @@
 
       // Validasi gambar utama
       const gambarUtamaError = document.getElementById('gambar_utama_error');
-      if (!imageData.gambar_utama) {
+      if (!imageFiles.gambar_utama) {
         gambarUtamaError.style.display = 'block';
         valid = false;
       } else {
@@ -863,51 +831,6 @@
 
       if (!valid) showToast('Lengkapi field wajib terlebih dahulu.', 'error');
       return valid;
-    }
-
-    function buildPayload() {
-      const formData = new FormData(FORM);
-      
-      // Tambahkan imageData ke payload
-      const payload = {
-        action: 'saveRentProperty',
-        sales: formData.get('sales').trim(),
-        sales_phone: formatPhone(formData.get('sales_phone')),
-        nama_property: formData.get('nama_property').trim(),
-        status: formData.get('status') || 'active',
-        booking_enabled: formData.get('booking_enabled') || 'yes',
-        room_type: formData.get('room_type'),
-        kategori: formData.get('kategori'),
-        harga_malam: onlyDigits(formData.get('harga_malam')),
-        harga_mingguan: onlyDigits(formData.get('harga_mingguan')),
-        harga_2_minggu: onlyDigits(formData.get('harga_2_minggu')),
-        harga_3_minggu: onlyDigits(formData.get('harga_3_minggu')),
-        harga_bulanan: onlyDigits(formData.get('harga_bulanan')),
-        maximum_guest: formData.get('maximum_guest'),
-        cleaning_fee: onlyDigits(formData.get('cleaning_fee')) || '0',
-        checkin_time: formData.get('checkin_time'),
-        checkout_time: formData.get('checkout_time'),
-        kt: formData.get('kt'),
-        km: formData.get('km'),
-        lt: formData.get('lt'),
-        lokasi: formData.get('lokasi').trim(),
-        alamat: formData.get('alamat').trim(),
-        deskripsi: formData.get('deskripsi').trim(),
-        fasilitas: getFacilities(),
-        peraturan: formData.get('peraturan').trim(),
-        kebijakan: formData.get('kebijakan').trim(),
-        kontak: formatPhone(formData.get('kontak')),
-        featured: formData.get('featured') || 'no',
-        youtube: formData.get('youtube').trim(),
-        gambar_utama: imageData.gambar_utama,
-        gambar2: imageData.gambar2,
-        gambar3: imageData.gambar3,
-        gambar4: imageData.gambar4,
-        gambar5: imageData.gambar5,
-        is_active: formData.get('status') === 'active' ? 'yes' : 'no'
-      };
-
-      return payload;
     }
 
     async function submitProperty(event) {
@@ -919,14 +842,31 @@
       SUBMIT_BTN.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
 
       try {
-        const payload = buildPayload();
-        
-        // Kirim sebagai FormData untuk menangani file
+        // Build FormData dengan semua field
         const formData = new FormData();
-        Object.keys(payload).forEach(key => {
-          formData.append(key, payload[key]);
+        
+        // Tambahkan action
+        formData.append('action', 'saveRentProperty');
+        
+        // Tambahkan semua field text
+        const formElements = FORM.querySelectorAll('input:not([type="file"]), select, textarea');
+        formElements.forEach(el => {
+          if (el.name) {
+            formData.append(el.name, el.value);
+          }
         });
+        
+        // Tambahkan fasilitas
+        formData.append('fasilitas', getFacilities());
+        
+        // Tambahkan gambar sebagai file
+        for (const [key, file] of Object.entries(imageFiles)) {
+          if (file) {
+            formData.append(key, file);
+          }
+        }
 
+        // Kirim data
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
           body: formData
@@ -952,7 +892,9 @@
 
     function resetForm() {
       FORM.reset();
-      Object.keys(imageData).forEach(key => imageData[key] = '');
+      Object.keys(imageFiles).forEach(key => {
+        imageFiles[key] = null;
+      });
       
       // Reset preview gambar
       document.querySelectorAll('.image-picker img').forEach(img => img.remove());
