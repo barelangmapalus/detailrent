@@ -683,7 +683,7 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwknGFeY9zaB-AqUL74W89VbB6V5FkydsKI03Z2FwzcujsXXHdjcm-2PHAO3Jb1hB9O4w/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOOCMjyLHi1QESrKRGvSpRKnLafsBNopAyATdDRtXzCy3vIwRodFohP13GNQQn6cqaFg/exec';
     const FORM = document.getElementById('propertyForm');
     const SUBMIT_BTN = document.getElementById('submitBtn');
     const RESET_BTN = document.getElementById('resetBtn');
@@ -941,14 +941,17 @@
     function resetForm() {
       FORM.reset();
       Object.keys(imageData).forEach(key => imageData[key] = '');
-      FORM.querySelectorAll('.error-text').forEach(item => item.style.display = 'none');
-      document.getElementById('gambar_utama_error').style.display = 'none';
-      document.querySelectorAll('.image-picker').forEach(label => {
-        const img = label.querySelector('img');
-        const tag = label.querySelector('.image-tag');
-        if (img) img.remove();
-        if (tag) tag.remove();
-        label.querySelector('.image-empty').style.display = 'grid';
+      FORM.querySelectorAll('[required]').forEach(field => {
+
+      const value =
+        field.type === 'file'
+          ? imageData[field.dataset.imageKey]
+          : field.value.trim();
+
+      if (!value) {
+        console.log('Field kosong:', field.name || field.dataset.imageKey);
+        valid = false;
+      }
       });
       hydrateHostFromStorage();
     }
