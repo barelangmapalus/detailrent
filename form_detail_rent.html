@@ -683,7 +683,7 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbws54AyoLuvFNDMOGPj68jIV_8rk-4MTx5yRAnrC6RZLE87dm2-TUnf8Irg2Fsfi0yDzg/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcMu5AtqhU3h5-oYbwPYjA6tClO9VjoRZfjTdPSbPOyH9--KCEqvKc-XJo9QDo1TQqAA/exec';
     const FORM = document.getElementById('propertyForm');
     const SUBMIT_BTN = document.getElementById('submitBtn');
     const RESET_BTN = document.getElementById('resetBtn');
@@ -1087,6 +1087,30 @@
           'gambar5',
           uploadedImages.gambar5 || ''
         );
+
+
+
+
+
+
+
+
+
+        console.log(
+          'gambar_utama HTML =',
+          uploadedImages.gambar_utama
+        );
+
+        console.log(
+          'length =',
+          uploadedImages.gambar_utama
+            ? uploadedImages.gambar_utama.length
+            : 0
+        );
+
+
+
+
 
         // Kirim data
         const response = await fetch(SCRIPT_URL, {
