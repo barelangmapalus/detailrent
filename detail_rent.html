@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>BMpro Rent - Detail Properti</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+font-family:Arial,sans-serif;
+background:#f5f7fb;
+color:#333;
+}
+
+.header{
+background:#fff;
+padding:15px 20px;
+box-shadow:0 2px 10px rgba(0,0,0,.08);
+position:sticky;
+top:0;
+z-index:100;
+}
+
+.header a{
+text-decoration:none;
+color:#0d6efd;
+font-weight:bold;
+}
+
+.container{
+max-width:1200px;
+margin:auto;
+padding:20px;
+}
+
+.loading,
+.error{
+text-align:center;
+padding:60px 20px;
+}
+
+.gallery{
+display:grid;
+grid-template-columns:2fr 1fr 1fr;
+grid-template-rows:220px 220px;
+gap:10px;
+margin-bottom:25px;
+}
+
+.gallery img{
+width:100%;
+height:100%;
+object-fit:cover;
+border-radius:12px;
+cursor:pointer;
+}
+
+.gallery-main{
+grid-row:1 / span 2;
+}
+
+.card{
+background:#fff;
+border-radius:14px;
+padding:20px;
+margin-bottom:20px;
+box-shadow:0 2px 10px rgba(0,0,0,.05);
+}
+
+.title{
+font-size:30px;
+font-weight:700;
+margin-bottom:10px;
+}
+
+.location{
+color:#666;
+margin-bottom:15px;
+}
+
+.price{
+font-size:32px;
+font-weight:700;
+color:#0d6efd;
+margin-bottom:20px;
+}
+
+.price span{
+font-size:16px;
+color:#666;
+font-weight:400;
+}
+
+.specs{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:12px;
+margin-bottom:25px;
+}
+
+.spec{
+background:#f7f9fc;
+padding:15px;
+border-radius:10px;
+text-align:center;
+}
+
+.spec i{
+font-size:22px;
+margin-bottom:10px;
+color:#0d6efd;
+}
+
+.spec strong{
+display:block;
+font-size:20px;
+}
+
+.section-title{
+font-size:22px;
+font-weight:700;
+margin-bottom:15px;
+}
+
+.facilities{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+gap:10px;
+}
+
+.facility{
+background:#f7f9fc;
+padding:12px;
+border-radius:8px;
+}
+
+.host-box{
+display:flex;
+justify-content:space-between;
+align-items:center;
+flex-wrap:wrap;
+gap:15px;
+}
+
+.btn-wa{
+background:#25D366;
+color:#fff;
+padding:14px 24px;
+border-radius:10px;
+text-decoration:none;
+font-weight:bold;
+}
+
+.lightbox{
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,.95);
+justify-content:center;
+align-items:center;
+z-index:9999;
+}
+
+.lightbox img{
+max-width:90%;
+max-height:90%;
+}
+
+.lightbox.active{
+display:flex;
+}
+
+@media(max-width:768px){
+
+.gallery{
+grid-template-columns:1fr;
+grid-template-rows:auto;
+}
+
+.gallery-main{
+grid-row:auto;
+}
+
+.specs{
+grid-template-columns:repeat(2,1fr);
+}
+
+.title{
+font-size:24px;
+}
+
+.price{
+font-size:28px;
+}
+
+}
+
+</style>
+</head>
+<body>
+
+<div class="header">
+<a href="listing_rent.html">
+<i class="fas fa-arrow-left"></i>
+Kembali ke Listing
+</a>
+</div>
+
+<div class="container" id="content">
+
+<div class="loading">
+<h2>Memuat detail properti...</h2>
+</div>
+
+</div>
+
+<div class="lightbox" id="lightbox">
+<img id="lightboxImg">
+</div>
+
+<script>
+
+const SPREADSHEET_ID = '1l8-ndY78xzXmsGu0k2ILgBjkVE3ty9tWB-FyKjnyHSA';
+
+const OPENSHEET_URL =
+`https://opensheet.elk.sh/${SPREADSHEET_ID}/rent_property`;
+
+const FALLBACK_IMAGE =
+'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1200';
+
+const propertyId =
+new URLSearchParams(window.location.search)
+.get('id');
+
+const content =
+document.getElementById('content');
+
+function driveImage(url){
+
+if(!url) return '';
+
+const match = url.match(/id=([^&]+)/);
+
+if(!match) return url;
+
+return `https://lh3.googleusercontent.com/d/${match[1]}`;
+
+}
+
+function formatRupiah(value){
+
+const number =
+Number(String(value || '').replace(/\D/g,''));
+
+if(!number) return '-';
+
+return 'Rp ' +
+number.toLocaleString('id-ID');
+
+}
+
+function escapeHtml(text){
+
+return String(text || '')
+.replace(/&/g,'&amp;')
+.replace(/</g,'&lt;')
+.replace(/>/g,'&gt;');
+
+}
+
+function openLightbox(src){
+
+document.getElementById('lightboxImg').src =
+src;
+
+document.getElementById('lightbox')
+.classList.add('active');
+
+}
+
+document
+.getElementById('lightbox')
+.addEventListener('click',()=>{
+
+document
+.getElementById('lightbox')
+.classList.remove('active');
+
+});
+
+async function loadProperty(){
+
+try{
+
+const response =
+await fetch(OPENSHEET_URL);
+
+const data =
+await response.json();
+
+const property =
+data.find(
+item =>
+item.property_id === propertyId
+);
+
+if(!property){
+
+content.innerHTML =
+`
+<div class="error">
+<h2>Data tidak ditemukan</h2>
+</div>
+`;
+
+return;
+
+}
+
+const images = [
+
+driveImage(property.gambar_utama),
+driveImage(property.gambar2),
+driveImage(property.gambar3),
+driveImage(property.gambar4),
+driveImage(property.gambar5)
+
+].filter(Boolean);
+
+const facilities =
+(property.fasilitas || '')
+.split(',')
+.map(x=>x.trim())
+.filter(Boolean);
+
+const wa =
+String(
+property.kontak ||
+property.sales_phone ||
+''
+).replace(/^0/,'62');
+
+content.innerHTML =
+
+`
+<div class="gallery">
+
+<img
+class="gallery-main"
+src="${images[0] || FALLBACK_IMAGE}"
+onclick="openLightbox(this.src)"
+>
+
+${images.slice(1).map(img=>`
+
+<img
+src="${img}"
+onclick="openLightbox(this.src)"
+>
+
+`).join('')}
+
+</div>
+
+<div class="card">
+
+<div class="title">
+${escapeHtml(property.nama_property)}
+</div>
+
+<div class="location">
+<i class="fas fa-location-dot"></i>
+${escapeHtml(property.alamat)}
+</div>
+
+<div class="price">
+${formatRupiah(property.harga_malam)}
+<span>/ malam</span>
+</div>
+
+<div class="specs">
+
+<div class="spec">
+<i class="fas fa-bed"></i>
+<strong>${property.kt}</strong>
+KT
+</div>
+
+<div class="spec">
+<i class="fas fa-bath"></i>
+<strong>${property.km}</strong>
+KM
+</div>
+
+<div class="spec">
+<i class="fas fa-ruler-combined"></i>
+<strong>${property.lt}</strong>
+m²
+</div>
+
+<div class="spec">
+<i class="fas fa-users"></i>
+<strong>${property.maximum_guest}</strong>
+Tamu
+</div>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<div class="section-title">
+Deskripsi
+</div>
+
+<p>
+${escapeHtml(property.deskripsi)}
+</p>
+
+</div>
+
+<div class="card">
+
+<div class="section-title">
+Fasilitas
+</div>
+
+<div class="facilities">
+
+${facilities.map(item=>`
+
+<div class="facility">
+✓ ${escapeHtml(item)}
+</div>
+
+`).join('')}
+
+</div>
+
+</div>
+
+<div class="card">
+
+<div class="section-title">
+Peraturan
+</div>
+
+<p>
+${escapeHtml(property.peraturan)}
+</p>
+
+</div>
+
+<div class="card">
+
+<div class="section-title">
+Kebijakan
+</div>
+
+<p>
+${escapeHtml(property.kebijakan)}
+</p>
+
+</div>
+
+<div class="card">
+
+<div class="host-box">
+
+<div>
+
+<h3>${escapeHtml(property.sales)}</h3>
+
+<p>
+Host Properti
+</p>
+
+</div>
+
+<a
+class="btn-wa"
+target="_blank"
+href="https://wa.me/${wa}"
+>
+<i class="fab fa-whatsapp"></i>
+Hubungi Host
+</a>
+
+</div>
+
+</div>
+`;
+
+}
+catch(error){
+
+console.error(error);
+
+content.innerHTML =
+`
+<div class="error">
+<h2>Gagal memuat data</h2>
+<p>${error.message}</p>
+</div>
+`;
+
+}
+
+}
+
+loadProperty();
+
+</script>
+
+</body>
+</html>
